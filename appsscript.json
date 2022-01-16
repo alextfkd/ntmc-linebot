@@ -1,0 +1,13 @@
+{
+  "timeZone": "Asia/Tokyo",
+  "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "LineAppLib",
+        "libraryId": "1wZF-p8DDNy0msI14pIVpqsFD_pawfA2dhzc4x7LhpXaQRiebWS6h3QEd"
+      }
+    ]
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8"
+}
