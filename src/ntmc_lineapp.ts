@@ -39,6 +39,20 @@ function doPost(e) {
             "このBOTはグループチャット専用となっております。グループチャットに友達登録してご利用ください。",
           );
         }
+      } else if (event.message.type == "file") {
+        if (event.source.type == "group") {
+          const groupFolderName = JSON.parse(
+            getGroupSummaryResponse(event.source.groupId).getContentText(),
+          ).groupName;
+          const imageBlob = getFile(event.message.id);
+          const groupFolder = getSubFolderOrCreateIfNotExist(groupFolderName);
+          saveImageBlobAsPng(imageBlob, groupFolder);
+        } else {
+          lineApp.sendSimpleReplyMessage(
+            event.replyToken,
+            "このBOTはグループチャット専用となっております。グループチャットに友達登録してご利用ください。",
+          );
+        }
       } else if (event.message.type == "text") {
         // message/text の場合個人トークのみ画像検索を行う.
         if (event.source.type == "group") {
@@ -62,7 +76,7 @@ function doPost(e) {
           } else {
             testArr.push({
               type: "text",
-              text: `「${event.message.text}」では候補が多すぎるため、見つかったスライドのうち４つのみをお送りします。複数のキーワードをスペースで区切って使ってみてください。(例: 「COVID19 皮疹」)`,
+              text: `「${event.message.text}」では候補が多すぎるため、見つかったスライドのうちランダムに４つのみお送りします。複数のキーワードをスペースで区切って使ってみてください。(例: 「COVID19 皮疹」)`,
             });
             for (var i = 0; i < 4; i++) {
               const url = fileUrl[i];
@@ -73,6 +87,7 @@ function doPost(e) {
               });
             }
           }
+
           lineApp.sendReplyMessageArray(event.replyToken, testArr);
           var dt = new Date();
           var d1 = Utilities.formatDate(
@@ -121,6 +136,7 @@ function textToQueryString(input: string): string {
         `(fullText contains "${input}" or title contains "${input}")`,
       );
     });
+    outputArr.push(`(mimeType contains "image/")`);
     const queryString = outputArr.join(" and ");
     console.log(queryString);
     return queryString;
@@ -165,6 +181,37 @@ function searchFiles(queryString: string): string[] {
     return imageUrlArray;
   } catch (e) {
     console.error(`searchFiles() ERROR: ${e}`);
+  }
+}
+
+/**
+ * LINEで送信された画像をGASで利用できるように再取得する.
+ * 具体的には、image messageのmessageIdを元にGoogle driveに保存可能なimageBlobとして取得している.
+ * @param messageId image message の messageId
+ * @returns 画像ファイルのBlob. デフォルトではimage/png形式のtemp.pngという名称.
+ */
+function getFile(messageId: string): GoogleAppsScript.Base.Blob {
+  try {
+    // image messageのcontentをFetchして取得する.
+    const token =
+      PropertiesService.getScriptProperties().getProperty("LINE_ACCESS_TOKEN");
+    const url = `https://api-data.line.me/v2/bot/message/${messageId}/content`;
+    const options: URLFetchRequestOptions = {
+      method: "get",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token,
+      },
+    };
+    const res = UrlFetchApp.fetch(url, options);
+    // 画像ファイルのBlobを取得して返り値とする. デフォルトではimage/png形式のtemp.pngという名称.
+    const blob = res.getBlob().getAs("application/pdf").setName("temp.pdf");
+    console.log("imageBlobの取得に成功しました");
+    console.log("ContentType:" + blob.getContentType());
+    console.log("Name: " + blob.getName());
+    return blob;
+  } catch (e) {
+    console.error(`Error: getFile() ${e}`);
   }
 }
 
